@@ -55,6 +55,7 @@ class Corpus(object):
 
         return ids
 
+
 class SentCorpus(object):
     def __init__(self, path):
         self.dictionary = Dictionary()
@@ -88,6 +89,7 @@ class SentCorpus(object):
 
         return sents
 
+
 class BatchSentLoader(object):
     def __init__(self, sents, batch_size, pad_id=0, cuda=False, volatile=False):
         self.sents = sents
@@ -101,25 +103,26 @@ class BatchSentLoader(object):
         if self.idx >= len(self.sort_sents):
             raise StopIteration
 
-        batch_size = min(self.batch_size, len(self.sort_sents)-self.idx)
-        batch = self.sort_sents[self.idx:self.idx+batch_size]
+        batch_size = min(self.batch_size, len(self.sort_sents) - self.idx)
+        batch = self.sort_sents[self.idx:self.idx + batch_size]
         max_len = max([s.size(0) for s in batch])
         tensor = torch.LongTensor(max_len, batch_size).fill_(self.pad_id)
         for i in range(len(batch)):
             s = batch[i]
-            tensor[:s.size(0),i].copy_(s)
+            tensor[:s.size(0), i].copy_(s)
         if self.cuda:
             tensor = tensor.cuda()
 
         self.idx += batch_size
 
         return tensor
-    
+
     next = __next__
 
     def __iter__(self):
         self.idx = 0
         return self
+
 
 if __name__ == '__main__':
     corpus = SentCorpus('../penn')

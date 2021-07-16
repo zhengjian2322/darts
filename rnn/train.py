@@ -55,7 +55,7 @@ parser.add_argument('--cuda', action='store_false',
                     help='use CUDA')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
-parser.add_argument('--save', type=str,  default='EXP',
+parser.add_argument('--save', type=str, default='EXP',
                     help='path to save the final model')
 parser.add_argument('--alpha', type=float, default=0,
                     help='alpha L2 regularization on RNN activation (alpha = 0 means no regularization)')
@@ -71,7 +71,7 @@ parser.add_argument('--small_batch_size', type=int, default=-1,
                      until batch_size is reached. An update step is then performed.')
 parser.add_argument('--max_seq_len_delta', type=int, default=20,
                     help='max sequence length')
-parser.add_argument('--single_gpu', default=True, action='store_false', 
+parser.add_argument('--single_gpu', default=True, action='store_false',
                     help='use single GPU')
 parser.add_argument('--gpu', type=int, default=0, help='GPU device to use')
 parser.add_argument('--arch', type=str, default='DARTS', help='which architecture to use')
@@ -88,7 +88,7 @@ if not args.continue_train:
 
 log_format = '%(asctime)s %(message)s'
 logging.basicConfig(stream=sys.stdout, level=logging.INFO,
-    format=log_format, datefmt='%m/%d %I:%M:%S %p')
+                    format=log_format, datefmt='%m/%d %I:%M:%S %p')
 fh = logging.FileHandler(os.path.join(args.save, 'log.txt'))
 fh.setFormatter(logging.Formatter(log_format))
 logging.getLogger().addHandler(fh)
@@ -102,7 +102,7 @@ if torch.cuda.is_available():
     else:
         torch.cuda.set_device(args.gpu)
         cudnn.benchmark = True
-        cudnn.enabled=True
+        cudnn.enabled = True
         torch.cuda.manual_seed_all(args.seed)
 
 corpus = data.Corpus(args.data)
@@ -113,15 +113,14 @@ train_data = batchify(corpus.train, args.batch_size, args)
 val_data = batchify(corpus.valid, eval_batch_size, args)
 test_data = batchify(corpus.test, test_batch_size, args)
 
-
 ntokens = len(corpus.dictionary)
 if args.continue_train:
     model = torch.load(os.path.join(args.save, 'model.pt'))
 else:
     genotype = eval("genotypes.%s" % args.arch)
-    model = model.RNNModel(ntokens, args.emsize, args.nhid, args.nhidlast, 
-                       args.dropout, args.dropouth, args.dropoutx, args.dropouti, args.dropoute, 
-                       cell_cls=model.DARTSCell, genotype=genotype)
+    model = model.RNNModel(ntokens, args.emsize, args.nhid, args.nhidlast,
+                           args.dropout, args.dropouth, args.dropoutx, args.dropouti, args.dropoute,
+                           cell_cls=model.DARTSCell, genotype=genotype)
 
 if args.cuda:
     if args.single_gpu:
@@ -193,7 +192,7 @@ def train():
             loss = raw_loss
             # Activiation Regularization
             if args.alpha > 0:
-              loss = loss + sum(args.alpha * dropped_rnn_h.pow(2).mean() for dropped_rnn_h in dropped_rnn_hs[-1:])
+                loss = loss + sum(args.alpha * dropped_rnn_h.pow(2).mean() for dropped_rnn_h in dropped_rnn_hs[-1:])
             # Temporal Activation Regularization (slowness)
             loss = loss + sum(args.beta * (rnn_h[1:] - rnn_h[:-1]).pow(2).mean() for rnn_h in rnn_hs[-1:])
             loss *= args.small_batch_size / args.batch_size
@@ -214,19 +213,20 @@ def train():
         optimizer.param_groups[0]['lr'] = lr2
 
         if np.isnan(total_loss[0]):
-          raise
+            raise
 
         if batch % args.log_interval == 0 and batch > 0:
             cur_loss = total_loss[0] / args.log_interval
             elapsed = time.time() - start_time
             logging.info('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
-                    'loss {:5.2f} | ppl {:8.2f}'.format(
+                         'loss {:5.2f} | ppl {:8.2f}'.format(
                 epoch, batch, len(train_data) // args.bptt, optimizer.param_groups[0]['lr'],
-                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
+                              elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
             total_loss = 0
             start_time = time.time()
         batch += 1
         i += seq_len
+
 
 # Loop over epochs.
 lr = args.lr
@@ -249,21 +249,21 @@ try:
     while epoch < args.epochs + 1:
         epoch_start_time = time.time()
         try:
-          train()
+            train()
         except:
-          logging.info('rolling back to the previous best model ...')
-          model = torch.load(os.path.join(args.save, 'model.pt'))
-          parallel_model = model.cuda()
-          
-          optimizer_state = torch.load(os.path.join(args.save, 'optimizer.pt'))
-          if 't0' in optimizer_state['param_groups'][0]:
-            optimizer = torch.optim.ASGD(model.parameters(), lr=args.lr, t0=0, lambd=0., weight_decay=args.wdecay)
-          else:
-            optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.wdecay)
-          optimizer.load_state_dict(optimizer_state)
+            logging.info('rolling back to the previous best model ...')
+            model = torch.load(os.path.join(args.save, 'model.pt'))
+            parallel_model = model.cuda()
 
-          epoch = torch.load(os.path.join(args.save, 'misc.pt'))['epoch']
-          continue
+            optimizer_state = torch.load(os.path.join(args.save, 'optimizer.pt'))
+            if 't0' in optimizer_state['param_groups'][0]:
+                optimizer = torch.optim.ASGD(model.parameters(), lr=args.lr, t0=0, lambd=0., weight_decay=args.wdecay)
+            else:
+                optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.wdecay)
+            optimizer.load_state_dict(optimizer_state)
+
+            epoch = torch.load(os.path.join(args.save, 'misc.pt'))['epoch']
+            continue
 
         if 't0' in optimizer.param_groups[0]:
             tmp = {}
@@ -274,8 +274,8 @@ try:
             val_loss2 = evaluate(val_data)
             logging.info('-' * 89)
             logging.info('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-                    'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
-                                               val_loss2, math.exp(val_loss2)))
+                         'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
+                                                    val_loss2, math.exp(val_loss2)))
             logging.info('-' * 89)
 
             if val_loss2 < stored_loss:
@@ -290,8 +290,8 @@ try:
             val_loss = evaluate(val_data, eval_batch_size)
             logging.info('-' * 89)
             logging.info('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-                    'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
-                                               val_loss, math.exp(val_loss)))
+                         'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
+                                                    val_loss, math.exp(val_loss)))
             logging.info('-' * 89)
 
             if val_loss < stored_loss:
@@ -299,7 +299,8 @@ try:
                 logging.info('Saving Normal!')
                 stored_loss = val_loss
 
-            if 't0' not in optimizer.param_groups[0] and (len(best_val_loss)>args.nonmono and val_loss > min(best_val_loss[:-args.nonmono])):
+            if 't0' not in optimizer.param_groups[0] and (
+                    len(best_val_loss) > args.nonmono and val_loss > min(best_val_loss[:-args.nonmono])):
                 logging.info('Switching!')
                 optimizer = torch.optim.ASGD(model.parameters(), lr=args.lr, t0=0, lambd=0., weight_decay=args.wdecay)
             best_val_loss.append(val_loss)

@@ -47,7 +47,7 @@ parser.add_argument('--cuda', action='store_false',
                     help='use CUDA')
 parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                     help='report interval')
-parser.add_argument('--model_path', type=str,  default='EXP/model.pt',
+parser.add_argument('--model_path', type=str, default='EXP/model.pt',
                     help='path to load the pretrained model')
 parser.add_argument('--alpha', type=float, default=0,
                     help='alpha L2 regularization on RNN activation (alpha = 0 means no regularization)')
@@ -64,8 +64,10 @@ parser.add_argument('--max_seq_len_delta', type=int, default=20,
 parser.add_argument('--gpu', type=int, default=0, help='GPU device to use')
 args = parser.parse_args()
 
+
 def logging(s, print_=True, log_=True):
     print(s)
+
 
 # Set the random seed manually for reproducibility.
 np.random.seed(args.seed)
@@ -76,9 +78,8 @@ if torch.cuda.is_available():
     else:
         torch.cuda.set_device(args.gpu)
         cudnn.benchmark = True
-        cudnn.enabled=True
+        cudnn.enabled = True
         torch.cuda.manual_seed_all(args.seed)
-
 
 corpus = data.Corpus(args.data)
 test_batch_size = 1
@@ -92,7 +93,7 @@ def evaluate(data_source, batch_size=10):
     ntokens = len(corpus.dictionary)
     hidden = model.init_hidden(batch_size)
     for i in range(0, data_source.size(0) - 1, args.bptt):
-        print(i, data_source.size(0)-1)
+        print(i, data_source.size(0) - 1)
         data, targets = get_batch(data_source, i, args, evaluation=True)
         targets = targets.view(-1)
 
@@ -103,6 +104,7 @@ def evaluate(data_source, batch_size=10):
 
         hidden = repackage_hidden(hidden)
     return total_loss[0] / len(data_source)
+
 
 # Load the best saved model.
 model = torch.load(args.model_path)
@@ -118,4 +120,3 @@ logging('=' * 89)
 logging('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
     test_loss, math.exp(test_loss)))
 logging('=' * 89)
-

@@ -73,7 +73,7 @@ class Network(nn.Module):
         self._layers = layers
         self._criterion = criterion
         self._steps = steps
-        self._multiplier = multiplier
+        self._multiplier = multiplier  # 4 通道数乘数因子 因为有4个中间节点 代表通道数要扩大4倍
 
         C_curr = stem_multiplier * C
         self.stem = nn.Sequential(
@@ -81,6 +81,9 @@ class Network(nn.Module):
             nn.BatchNorm2d(C_curr)
         )
 
+        # 对于第一个cell来说，stem即是s0，也是s1
+        # C_prev_prev, C_prev是输出channel 48
+        # C_curr 现在是输入channel 16
         C_prev_prev, C_prev, C_curr = C_curr, C_curr, C
         self.cells = nn.ModuleList()
         reduction_prev = False
@@ -113,7 +116,7 @@ class Network(nn.Module):
                 weights = F.softmax(self.alphas_reduce, dim=-1)
             else:
                 weights = F.softmax(self.alphas_normal, dim=-1)
-            s0, s1 = s1, cell(s0, s1, weights)
+            s0, s1 = s1, cell(s0, s1, weights)  # 上上一层输出，上一层输出
         out = self.global_pooling(s1)
         logits = self.classifier(out.view(out.size(0), -1))
         return logits

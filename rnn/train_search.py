@@ -54,7 +54,7 @@ parser.add_argument('--cuda', action='store_false',
                     help='use CUDA')
 parser.add_argument('--log-interval', type=int, default=50, metavar='N',
                     help='report interval')
-parser.add_argument('--save', type=str,  default='EXP',
+parser.add_argument('--save', type=str, default='EXP',
                     help='path to save the final model')
 parser.add_argument('--alpha', type=float, default=0,
                     help='alpha L2 regularization on RNN activation (alpha = 0 means no regularization)')
@@ -70,7 +70,7 @@ parser.add_argument('--small_batch_size', type=int, default=-1,
                      until batch_size is reached. An update step is then performed.')
 parser.add_argument('--max_seq_len_delta', type=int, default=20,
                     help='max sequence length')
-parser.add_argument('--single_gpu', default=True, action='store_false', 
+parser.add_argument('--single_gpu', default=True, action='store_false',
                     help='use single GPU')
 parser.add_argument('--gpu', type=int, default=0, help='GPU device to use')
 parser.add_argument('--unrolled', action='store_true', default=False, help='use one-step unrolled validation loss')
@@ -91,7 +91,7 @@ if not args.continue_train:
 
 log_format = '%(asctime)s %(message)s'
 logging.basicConfig(stream=sys.stdout, level=logging.INFO,
-    format=log_format, datefmt='%m/%d %I:%M:%S %p')
+                    format=log_format, datefmt='%m/%d %I:%M:%S %p')
 fh = logging.FileHandler(os.path.join(args.save, 'log.txt'))
 fh.setFormatter(logging.Formatter(log_format))
 logging.getLogger().addHandler(fh)
@@ -105,7 +105,7 @@ if torch.cuda.is_available():
     else:
         torch.cuda.set_device(args.gpu)
         cudnn.benchmark = True
-        cudnn.enabled=True
+        cudnn.enabled = True
         torch.cuda.manual_seed_all(args.seed)
 
 corpus = data.Corpus(args.data)
@@ -118,13 +118,12 @@ search_data = batchify(corpus.valid, args.batch_size, args)
 val_data = batchify(corpus.valid, eval_batch_size, args)
 test_data = batchify(corpus.test, test_batch_size, args)
 
-
 ntokens = len(corpus.dictionary)
 if args.continue_train:
     model = torch.load(os.path.join(args.save, 'model.pt'))
 else:
-    model = model.RNNModelSearch(ntokens, args.emsize, args.nhid, args.nhidlast, 
-                       args.dropout, args.dropouth, args.dropoutx, args.dropouti, args.dropoute)
+    model = model.RNNModelSearch(ntokens, args.emsize, args.nhid, args.nhidlast,
+                                 args.dropout, args.dropouth, args.dropoutx, args.dropouti, args.dropoute)
 
 size = 0
 for p in model.parameters():
@@ -196,7 +195,8 @@ def train():
         start, end, s_id = 0, args.small_batch_size, 0
         while start < args.batch_size:
             cur_data, cur_targets = data[:, start: end], targets[:, start: end].contiguous().view(-1)
-            cur_data_valid, cur_targets_valid = data_valid[:, start: end], targets_valid[:, start: end].contiguous().view(-1)
+            cur_data_valid, cur_targets_valid = data_valid[:, start: end], targets_valid[:,
+                                                                           start: end].contiguous().view(-1)
 
             # Starting each batch, we detach the hidden state from how it was previously produced.
             # If we didn't, the model would try backpropagating all the way to start of the dataset.
@@ -204,10 +204,10 @@ def train():
             hidden_valid[s_id] = repackage_hidden(hidden_valid[s_id])
 
             hidden_valid[s_id], grad_norm = architect.step(
-                    hidden[s_id], cur_data, cur_targets,
-                    hidden_valid[s_id], cur_data_valid, cur_targets_valid,
-                    optimizer,
-                    args.unrolled)
+                hidden[s_id], cur_data, cur_targets,
+                hidden_valid[s_id], cur_data_valid, cur_targets_valid,
+                optimizer,
+                args.unrolled)
 
             # assuming small_batch_size = batch_size so we don't accumulate gradients
             optimizer.zero_grad()
@@ -219,7 +219,7 @@ def train():
             loss = raw_loss
             # Activiation Regularization
             if args.alpha > 0:
-              loss = loss + sum(args.alpha * dropped_rnn_h.pow(2).mean() for dropped_rnn_h in dropped_rnn_hs[-1:])
+                loss = loss + sum(args.alpha * dropped_rnn_h.pow(2).mean() for dropped_rnn_h in dropped_rnn_hs[-1:])
             # Temporal Activation Regularization (slowness)
             loss = loss + sum(args.beta * (rnn_h[1:] - rnn_h[:-1]).pow(2).mean() for rnn_h in rnn_hs[-1:])
             loss *= args.small_batch_size / args.batch_size
@@ -244,13 +244,14 @@ def train():
             cur_loss = total_loss[0] / args.log_interval
             elapsed = time.time() - start_time
             logging.info('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
-                    'loss {:5.2f} | ppl {:8.2f}'.format(
+                         'loss {:5.2f} | ppl {:8.2f}'.format(
                 epoch, batch, len(train_data) // args.bptt, optimizer.param_groups[0]['lr'],
-                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
+                              elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
             total_loss = 0
             start_time = time.time()
         batch += 1
         i += seq_len
+
 
 # Loop over epochs.
 lr = args.lr
@@ -267,15 +268,15 @@ if args.continue_train:
 else:
     optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.wdecay)
 
-for epoch in range(1, args.epochs+1):
+for epoch in range(1, args.epochs + 1):
     epoch_start_time = time.time()
     train()
 
     val_loss = evaluate(val_data, eval_batch_size)
     logging.info('-' * 89)
     logging.info('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-            'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
-                                       val_loss, math.exp(val_loss)))
+                 'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
+                                            val_loss, math.exp(val_loss)))
     logging.info('-' * 89)
 
     if val_loss < stored_loss:
